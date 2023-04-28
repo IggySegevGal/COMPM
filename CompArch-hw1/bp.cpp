@@ -7,8 +7,16 @@
 #define WT 2
 #define ST 3
 
+unsigned tag_mask;
+unsigned hist_mask;
+
+
 int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize, unsigned fsmState,
 			bool isGlobalHist, bool isGlobalTable, int Shared){
+            /* create mask with ones in the first lsbits <unsigned>(0)<size>(1):
+            example - if size is 3 than: mask = 000000...000111 */
+            tag_mask = (2 ^ tagSize) - 1; 
+            hist_mask = (2 ^ historySize) - 1;
 	return -1;
 }
 
@@ -29,13 +37,26 @@ class btb {
 private:
    vector<btb_line> *btb_vector;
    //ifdef isGlobalHist {}
-   bool *global_history;
+   unsigned global_history;
+   unsigned *global_fsm_table;
 public:  
    // constructors
    btb(){}
-   btb(unsigned btbSize){
-      btb_vector = new vector<btb_line> [ btbSize];
-
+   btb(unsigned btbSize, unsigned historySize, unsigned tagSize, unsigned fsmState,
+			bool isGlobalHist, bool isGlobalTable, int Shared){
+         /* init btb table - vector of btb lines: */
+         btb_vector = new vector<btb_line> [btbSize];
+         /* init global history if isGlobalHist is true: */
+         if (isGlobalHist){
+            global_history = 0;
+         }
+         if (isGlobalTable){ /* this table holds the fsm state for each history*/
+            global_fsm_table = new fsm (2 ^ historySize);
+            for (int i = 0; i < 2 ^ historySize; i++) {
+               // need to check **************************************
+               global_fsm_table[i] = fsm(fsmState);
+            }
+         }
    }
     
     // destructor
@@ -61,7 +82,7 @@ public:
    btb_line(){}
    btb_line(unsigned historySize){
       // and if isGlobalHist initialize
-      history = new bool[historySize];
+      //history = new bool[historySize];
 
    }
 
@@ -76,7 +97,7 @@ public:
     // setters
     void set_(string );
 
-};
+}
 
 class fsm { 
    private:
@@ -85,21 +106,21 @@ class fsm {
       // constructors
       fsm();
       fsm(unsigned fsm_init_state){
-         this->fsm_state = fsm_init_state;
+         this->fsmState = fsm_init_state;
       }
     
       // destructor
       ~fsm();
 
       // getters:
-   bool get_state(unsigned fsm_state){
-      if(this->fsm_state == SNT){ // Strongly not taken - return false
+   bool get_pred(){ // get prediction according to current fsm state
+      if(this->fsmState == SNT){ // Strongly not taken - return false
          return false;
       }
-      else if (this->fsm_state == WNT) { // Weakly not taken - return false 
+      else if (this->fsmState == WNT) { // Weakly not taken - return false 
          return false;
       }
-      else if (this->fsm_state == WT) { // Weakly taken - return true 
+      else if (this->fsmState == WT) { // Weakly taken - return true 
          return true;
       }
       else { // Strongly taken - return true 
@@ -108,38 +129,38 @@ class fsm {
    }
    
     // setters
-    void set_state(bool fsm_pred){
-      if(this->fsm_state == SNT){ // Strongly not taken - return false
+    void next_state(bool fsm_pred){
+      if(this->fsmState == SNT){ // Strongly not taken - return false
          if(fsm_pred == 1){ // taken
-            this->fsm_state = WNT;
+            this->fsmState = WNT;
          }
          return;
       }
-      else if (this->fsm_state == WNT) { // Weakly not taken - return false 
+      else if (this->fsmState == WNT) { // Weakly not taken - return false 
          if(fsm_pred == 1){ // taken - move to WT
-            this->fsm_state = WT;
+            this->fsmState = WT;
          }
          else { // not taken - move to SNT
-            this->fsm_state = SNT;
+            this->fsmState = SNT;
          }
          return;
       }
-      else if (this->fsm_state == WT) { // Weakly taken - return true 
+      else if (this->fsmState == WT) { // Weakly taken - return true 
          if(fsm_pred == 1){ // taken - move to ST
-            this->fsm_state = ST;
+            this->fsmState = ST;
          }
          else { // not taken - move to WNT
-            this->fsm_state = WNT;
+            this->fsmState = WNT;
          }
          return;
       }
       else { // Strongly taken - return true 
          if(fsm_pred == 0){ // not taken - move to WT
-            this->fsm_state = WT;
+            this->fsmState = WT;
          }
          return;
       }
       
     }
 
-   };
+}
