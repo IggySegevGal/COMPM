@@ -4,6 +4,8 @@
 #include "bp_api.h"
 #include <cmath>
 #include <vector>
+#include <iostream>
+using namespace std;
 #define SNT 0
 #define WNT 1
 #define WT 2
@@ -75,14 +77,14 @@ class fsm {
       
     }
 
-}
+};
 
 
 class btb_line { 
 public:  
    unsigned tag;
    unsigned history;
-   unsigned *fsm_table;
+   fsm *fsm_table;
    uint32_t pred_dst; // predicted target address
 
 
@@ -96,7 +98,7 @@ public:
          this->history = 0;
          if (!isGlobalTable){ /* this table holds the fsm state for each history*/
             fsm_table = new fsm (pow(2, historySize));
-            for (int i = 0; i < 2  historySize; i++) {
+            for (int i = 0; i < (pow(2, historySize)); i++) {
                // need to check **************************************
                fsm_table[i] = fsm(fsmState);
             }
@@ -109,14 +111,14 @@ public:
     }
 
 
-}
+};
 
 // classes btb_line and btb:
 class btb { 
 public:
    vector<btb_line> *btb_vector;
    unsigned global_history;
-   unsigned *global_fsm_table;
+   fsm *global_fsm_table;
    unsigned btbSize;
    bool isGlobalHist;
    bool isGlobalTable;
@@ -162,17 +164,17 @@ public:
       void update_entry(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst, uint32_t tag_pc){
          this->br_num++; // count updates
          unsigned *history_used;
-         unsigned *fsm_table_used;
+         fsm *fsm_table_used;
          unsigned fsm_entry;
          unsigned tag_entry = pc % btbSize;
          bool same_tag = true;
          // not in table - create line:
-         if (!btb_vector[tag_entry]){ // entry is null
+         if ((btb_vector[tag_entry]).empty()){ // entry is null
             // init line
-            btb_vector[tag_entry] = btb_line( historySize, fsmState, isGlobalHist, isGlobalTable, tag_pc, targetPc);
+btb_vector->insert(btb_vector->begin() + tag_entry, btb_line( historySize, fsmState, isGlobalHist, isGlobalTable, tag_pc, targetPc));
             same_tag = false;
             if (taken) {
-               btb_table->flush_num++;
+               this->flush_num++;
             }
          }
          else if (btb_vector[tag_entry].tag != tag_pc){ // need to delete line (different tag)
@@ -231,7 +233,7 @@ public:
 
     bool find_entry_return_pred(uint32_t pc, uint32_t tag_pc, uint32_t *dst){
       unsigned history_used;
-      unsigned *fsm_table_used;
+      fsm *fsm_table_used;
       unsigned fsm_entry;
       unsigned tag_entry = pc % btbSize;
       // not in table - return pc + 4 and false
@@ -272,7 +274,7 @@ public:
          dst* = pc+4;
          return false; // not taken
       }
-   }
+   };
 
 
 /* -------------------------------------------------------------------- */
