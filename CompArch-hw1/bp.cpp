@@ -11,11 +11,6 @@
 #define using_share_mid 2
 #define not_using_share 0
 
-
-unsigned tag_mask;
-unsigned hist_mask;
-btb *btb_table;
-
 // classes btb_line and btb:
 class btb { 
 public:
@@ -286,6 +281,11 @@ class fsm {
 
 }
 
+/* -------------------------------------------------------------------- */
+
+unsigned tag_mask;
+unsigned hist_mask;
+btb *btb_table;
 
 int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize, unsigned fsmState,
 			bool isGlobalHist, bool isGlobalTable, int Shared){
