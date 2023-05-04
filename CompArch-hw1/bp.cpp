@@ -16,49 +16,6 @@ unsigned tag_mask;
 unsigned hist_mask;
 btb *btb_table;
 
-int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize, unsigned fsmState,
-			bool isGlobalHist, bool isGlobalTable, int Shared){
-            /* init btb table */
-            *btb_table = btb(unsigned btbSize, unsigned historySize, unsigned fsmState,
-			                  bool isGlobalHist, bool isGlobalTable, int Shared);
-
-            /* create mask with ones in the first lsbits <unsigned>(0)<size>(1):
-            example - if size is 3 than: mask = 000000...000111 */
-            tag_mask = pow(2, tagSize) - 1; 
-            hist_mask = pow(2, historySize) - 1;
-
-	return -1;
-}
-
-bool BP_predict(uint32_t pc, uint32_t *dst){ 
-   /* if pc tag is in btb -
-   if taken - return true, dst->pred_dst
-   if not taken - return false, dst-> pc+4  */
-   /* if pc tag is not in btb return false, dst-> pc+4 */
-   uint32_t tag_pc = ((pc>>2) / btb_table->btbSize) & tag_mask;
-	return btb_table->find_entry_return_pred( pc>>2 ,tag_pc , *dst);
-}
-
-void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst){
-   uint32_t tag_pc = ((pc>>2) / btb_table->btbSize) & tag_mask;
-
-   // check if prediction was correct:
-   if((!taken && ((pc + 4) != pred_dst)) || (taken && (targetPc != pred_dst))){ 
-		btb_table->flush_num++;
-	}
-
-   // update entry:
-	btb_table->update_entry(pc, targetPc, taken, pred_dst, tag_pc);
-   return;
-}
-
-void BP_GetStats(SIM_stats *curStats){
-   curStats->flush_num = btb_table->flush_num;
-   curStats->br_num = btb_table->br_num;
-   curStats->size = callfunction-------------------------------------------------;
-	return;
-}
-
 // classes btb_line and btb:
 class btb { 
 public:
@@ -328,3 +285,48 @@ class fsm {
     }
 
 }
+
+
+int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize, unsigned fsmState,
+			bool isGlobalHist, bool isGlobalTable, int Shared){
+            /* init btb table */
+            *btb_table = btb(unsigned btbSize, unsigned historySize, unsigned fsmState,
+			                  bool isGlobalHist, bool isGlobalTable, int Shared);
+
+            /* create mask with ones in the first lsbits <unsigned>(0)<size>(1):
+            example - if size is 3 than: mask = 000000...000111 */
+            tag_mask = pow(2, tagSize) - 1; 
+            hist_mask = pow(2, historySize) - 1;
+
+	return -1;
+}
+
+bool BP_predict(uint32_t pc, uint32_t *dst){ 
+   /* if pc tag is in btb -
+   if taken - return true, dst->pred_dst
+   if not taken - return false, dst-> pc+4  */
+   /* if pc tag is not in btb return false, dst-> pc+4 */
+   uint32_t tag_pc = ((pc>>2) / btb_table->btbSize) & tag_mask;
+	return btb_table->find_entry_return_pred( pc>>2 ,tag_pc , *dst);
+}
+
+void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst){
+   uint32_t tag_pc = ((pc>>2) / btb_table->btbSize) & tag_mask;
+
+   // check if prediction was correct:
+   if((!taken && ((pc + 4) != pred_dst)) || (taken && (targetPc != pred_dst))){ 
+		btb_table->flush_num++;
+	}
+
+   // update entry:
+	btb_table->update_entry(pc, targetPc, taken, pred_dst, tag_pc);
+   return;
+}
+
+void BP_GetStats(SIM_stats *curStats){
+   curStats->flush_num = btb_table->flush_num;
+   curStats->br_num = btb_table->br_num;
+   curStats->size = callfunction-------------------------------------------------;
+	return;
+}
+
