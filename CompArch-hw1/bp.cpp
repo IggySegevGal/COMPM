@@ -110,7 +110,7 @@ public:
 
     // destructor
     ~btb_line(){
-      delete[] fsm_table;
+      //delete[] fsm_table;
     }
 
 
@@ -133,35 +133,10 @@ public:
 	unsigned size;	
    // constructors
 btb(){}
-   btb(unsigned btbSize, unsigned historySize, unsigned fsmState,
-			bool isGlobalHist, bool isGlobalTable, int Shared){
-         /* init btb table - vector of btb lines: */
-         this->btb_vector = new vector<btb_line> [btbSize];
-         this->btbSize = btbSize;
-         this->isGlobalHist = isGlobalHist;
-         this->isGlobalTable = isGlobalTable;
-         this->Shared = Shared;
-         this->historySize = historySize;
-         this->fsmState = fsmState;
-         this->flush_num = 0;
-         this->br_num = 0;
-
-         /* init global history if isGlobalHist is true: */
-         if (isGlobalHist){
-            this->global_history = 0;
-         }
-         if (isGlobalTable){ /* this table holds the fsm state for each history*/
-            this->global_fsm_table = new fsm (pow(2, historySize));
-            for (int i = 0; i < pow(2, historySize); i++) {
-               // need to check **************************************
-               this->global_fsm_table[i] = fsm(fsmState);
-            }
-         }
-   }
     
     // destructor
     ~btb(){
-      delete[] global_fsm_table;
+      //delete[] global_fsm_table;
     }
    
     //method functions
@@ -177,9 +152,6 @@ btb(){}
             // init line
 btb_vector->insert(btb_vector->begin() + tag_entry, btb_line( historySize, fsmState, isGlobalHist, isGlobalTable, tag_pc, targetPc));
             same_tag = false;
-            if (taken) {
-               this->flush_num++;
-            }
          }
          else if (((*btb_vector)[tag_entry]).tag != tag_pc){ // need to delete line (different tag)
             // destroy line:
@@ -187,6 +159,9 @@ btb_vector->insert(btb_vector->begin() + tag_entry, btb_line( historySize, fsmSt
             // init new line:
 btb_vector->insert(btb_vector->begin() + tag_entry, btb_line( historySize, fsmState, isGlobalHist, isGlobalTable, tag_pc, targetPc));
             same_tag = false;
+            //if (taken) {
+            //   this->flush_num++;
+            //}
          }
 
          /* first step - choose local or global history */
@@ -242,7 +217,7 @@ btb_vector->insert(btb_vector->begin() + tag_entry, btb_line( historySize, fsmSt
       unsigned tag_entry = pc % btbSize;
       // not in table - return pc + 4 and false
       if (btb_vector[tag_entry].empty()){ // entry is null
-         *dst = pc+4;
+         *dst = (pc<<2)+4;
          return false; // not found
       }
       // in table - check if taken:
@@ -275,7 +250,7 @@ btb_vector->insert(btb_vector->begin() + tag_entry, btb_line( historySize, fsmSt
          *dst = (*btb_vector)[tag_entry].pred_dst;
          return true; // found and taken
       }
-         *dst = pc+4;
+         *dst = (pc<<2)+4;
          return false; // not taken
       }
    };
@@ -288,15 +263,36 @@ btb *btb_table = new btb[1];
 int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize, unsigned fsmState,
 			bool isGlobalHist, bool isGlobalTable, int Shared){
             /* init btb table */
-            btb_table[0] = btb( btbSize,  historySize,  fsmState,
-			                   isGlobalHist,  isGlobalTable,  Shared);
+            btb_table[0] = btb();
+		         /* init btb table - vector of btb lines: */
+         btb_table->btb_vector = new vector<btb_line> [btbSize];
+         btb_table->btbSize = btbSize;
+         btb_table->isGlobalHist = isGlobalHist;
+         btb_table->isGlobalTable = isGlobalTable;
+         btb_table->Shared = Shared;
+         btb_table->historySize = historySize;
+         btb_table->fsmState = fsmState;
+         btb_table->flush_num = 0;
+         btb_table->br_num = 0;
+
+         /* init global history if isGlobalHist is true: */
+         if (isGlobalHist){
+            btb_table->global_history = 0;
+         }
+         if (isGlobalTable){ /* this table holds the fsm state for each history*/
+            btb_table->global_fsm_table = new fsm (pow(2, historySize));
+            for (int i = 0; i < pow(2, historySize); i++) {
+               // need to check **************************************
+               btb_table->global_fsm_table[i] = fsm(fsmState);
+            }
+         }
 
             /* create mask with ones in the first lsbits <unsigned>(0)<size>(1):
             example - if size is 3 than: mask = 000000...000111 */
             tag_mask = pow(2, tagSize) - 1; 
             hist_mask = pow(2, historySize) - 1;
 
-	return -1;
+	return 0;
 }
 
 bool BP_predict(uint32_t pc, uint32_t *dst){ 
