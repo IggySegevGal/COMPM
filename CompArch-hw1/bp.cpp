@@ -3,6 +3,7 @@
 
 #include "bp_api.h"
 #include <cmath>
+#include <vector>
 #define SNT 0
 #define WNT 1
 #define WT 2
@@ -11,11 +12,109 @@
 #define using_share_mid 2
 #define not_using_share 0
 
+class fsm { 
+   private:
+      unsigned fsmState;
+   public:  
+      // constructors
+      fsm(unsigned fsm_init_state){
+         this->fsmState = fsm_init_state;
+      }
+    
+      // destructor
+      ~fsm(){}
+
+      // getters:
+   bool get_pred(){ // get prediction according to current fsm state
+      if(this->fsmState == SNT){ // Strongly not taken - return false
+         return false;
+      }
+      else if (this->fsmState == WNT) { // Weakly not taken - return false 
+         return false;
+      }
+      else if (this->fsmState == WT) { // Weakly taken - return true 
+         return true;
+      }
+      else { // Strongly taken - return true 
+         return true;
+      }
+   }
+   
+    // setters
+    void next_state(bool taken){
+      if(this->fsmState == SNT){ // Strongly not taken - return false
+         if(taken == 1){ // taken
+            this->fsmState = WNT;
+         }
+         return;
+      }
+      else if (this->fsmState == WNT) { // Weakly not taken - return false 
+         if(taken == 1){ // taken - move to WT
+            this->fsmState = WT;
+         }
+         else { // not taken - move to SNT
+            this->fsmState = SNT;
+         }
+         return;
+      }
+      else if (this->fsmState == WT) { // Weakly taken - return true 
+         if(taken == 1){ // taken - move to ST
+            this->fsmState = ST;
+         }
+         else { // not taken - move to WNT
+            this->fsmState = WNT;
+         }
+         return;
+      }
+      else { // Strongly taken - return true 
+         if(taken == 0){ // not taken - move to WT
+            this->fsmState = WT;
+         }
+         return;
+      }
+      
+    }
+
+}
+
+
+class btb_line { 
+public:  
+   unsigned tag;
+   unsigned history;
+   unsigned *fsm_table;
+   uint32_t pred_dst; // predicted target address
+
+
+   // constructors
+   btb_line(unsigned historySize, unsigned fsmState,
+			bool isGlobalHist, bool isGlobalTable, uint32_t tag_pc, uint32_t targetPc){ // updates only tag & pred_dst
+         // initializes fsm_table and history to zero !!!!
+         /* init local history if isGlobalHist is false: */
+         this->tag = tag_pc;
+         this->pred_dst = targetPc;
+         this->history = 0;
+         if (!isGlobalTable){ /* this table holds the fsm state for each history*/
+            fsm_table = new fsm (pow(2, historySize));
+            for (int i = 0; i < 2  historySize; i++) {
+               // need to check **************************************
+               fsm_table[i] = fsm(fsmState);
+            }
+         }
+   }
+
+    // destructor
+    ~btb_line(){
+      delete[] fsm_table;
+    }
+
+
+}
+
 // classes btb_line and btb:
 class btb { 
 public:
    vector<btb_line> *btb_vector;
-   //ifdef isGlobalHist {}
    unsigned global_history;
    unsigned *global_fsm_table;
    unsigned btbSize;
@@ -28,7 +127,6 @@ public:
 	unsigned br_num;      	      // Number of branch instructions
 	unsigned size;	
    // constructors
-   btb(){}
    btb(unsigned btbSize, unsigned historySize, unsigned fsmState,
 			bool isGlobalHist, bool isGlobalTable, int Shared){
          /* init btb table - vector of btb lines: */
@@ -174,112 +272,8 @@ public:
          dst* = pc+4;
          return false; // not taken
       }
-   };
-
-class btb_line { 
-public:  
-   unsigned tag;
-   unsigned history;
-   unsigned *fsm_table;
-   uint32_t pred_dst; // predicted target address
-
-
-   // constructors
-   btb_line(){}
-   btb_line(unsigned historySize, unsigned fsmState,
-			bool isGlobalHist, bool isGlobalTable, uint32_t tag_pc, uint32_t targetPc){ // updates only tag & pred_dst
-         // initializes fsm_table and history to zero !!!!
-         /* init local history if isGlobalHist is false: */
-         this->tag = tag_pc;
-         this->pred_dst = targetPc;
-         this->history = 0;
-         if (!isGlobalTable){ /* this table holds the fsm state for each history*/
-            fsm_table = new fsm (pow(2, historySize));
-            for (int i = 0; i < 2  historySize; i++) {
-               // need to check **************************************
-               fsm_table[i] = fsm(fsmState);
-            }
-         }
    }
 
-    // destructor
-    ~btb_line(){
-      delete[] fsm_table;
-    }
-
-    // getters:
-    int get(); 
-
-    // setters
-    void set_(string );
-
-}
-
-class fsm { 
-   private:
-      unsigned fsmState;
-   public:  
-      // constructors
-      fsm();
-      fsm(unsigned fsm_init_state){
-         this->fsmState = fsm_init_state;
-      }
-    
-      // destructor
-      ~fsm();
-
-      // getters:
-   bool get_pred(){ // get prediction according to current fsm state
-      if(this->fsmState == SNT){ // Strongly not taken - return false
-         return false;
-      }
-      else if (this->fsmState == WNT) { // Weakly not taken - return false 
-         return false;
-      }
-      else if (this->fsmState == WT) { // Weakly taken - return true 
-         return true;
-      }
-      else { // Strongly taken - return true 
-         return true;
-      }
-   }
-   
-    // setters
-    void next_state(bool taken){
-      if(this->fsmState == SNT){ // Strongly not taken - return false
-         if(taken == 1){ // taken
-            this->fsmState = WNT;
-         }
-         return;
-      }
-      else if (this->fsmState == WNT) { // Weakly not taken - return false 
-         if(taken == 1){ // taken - move to WT
-            this->fsmState = WT;
-         }
-         else { // not taken - move to SNT
-            this->fsmState = SNT;
-         }
-         return;
-      }
-      else if (this->fsmState == WT) { // Weakly taken - return true 
-         if(taken == 1){ // taken - move to ST
-            this->fsmState = ST;
-         }
-         else { // not taken - move to WNT
-            this->fsmState = WNT;
-         }
-         return;
-      }
-      else { // Strongly taken - return true 
-         if(taken == 0){ // not taken - move to WT
-            this->fsmState = WT;
-         }
-         return;
-      }
-      
-    }
-
-}
 
 /* -------------------------------------------------------------------- */
 
@@ -326,7 +320,7 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst){
 void BP_GetStats(SIM_stats *curStats){
    curStats->flush_num = btb_table->flush_num;
    curStats->br_num = btb_table->br_num;
-   curStats->size = callfunction-------------------------------------------------;
+   //curStats->size = callfunction-------------------------------------------------;
 	return;
 }
 
