@@ -321,7 +321,36 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst){
 void BP_GetStats(SIM_stats *curStats){
    curStats->flush_num = btb_table->flush_num;
    curStats->br_num = btb_table->br_num;
-   //curStats->size = callfunction-------------------------------------------------;
+
+   int predictor_size = 0;
+	
+	int valid = 1;
+	int ADDRR = 30;
+	
+	if(btb_table.isGlobalHist){
+		
+		if(btb_table.isGlobalTable){
+			predictor_size = (btb_table->btbSize)*(valid+ btb_table->tagSize + ADDRR ) + btb_table->historySize + int(2*pow(2,btb_table->historySize));				
+		}
+		
+		else{
+			predictor_size = (btb_table->btbSize)*(valid+btb_table->tagSize + ADDRR ) + (btb_table->btbSize)*int(2*pow(2,btb_table->historySize)) + btb_table->historySize;	
+		}
+				
+	}
+	
+	else{
+		
+		if(btb_table.isGlobalTable){
+		predictor_size = (btb_table->btbSize)*(valid + btb_table->tagSize + ADDRR ) + (btb_table->btbSize)*(btb_table->historySize) + int(2*pow(2,btb_table->historySize));	
+		}
+		
+		else{
+			predictor_size = (btb_table->btbSize)*(valid + btb_table->tagSize + ADDRR ) + (btb_table->btbSize)*(btb_table->historySize) + int((btb_table->btbSize)*2*pow(2,btb_table->historySize));
+		}
+	}
+
+
+   curStats->size = predictor_size;
 	return;
 }
-
