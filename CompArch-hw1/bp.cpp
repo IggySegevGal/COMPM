@@ -190,11 +190,12 @@ btb_vector->insert(btb_vector->begin() + tag_entry, btb_line( historySize, fsmSt
          }
 
          // update history and fsm:
-         if (same_tag){ // check target prediction
-            if (targetPc != pred_dst) { // wrong prediction
-               (*btb_vector)[tag_entry].pred_dst = targetPc;
-            }
-         }
+(*btb_vector)[tag_entry].pred_dst = targetPc;
+         //if (same_tag){ // check target prediction
+           // if (targetPc != pred_dst) { // wrong prediction
+             //  (*btb_vector)[tag_entry].pred_dst = targetPc;
+           // }
+         //}
 
          // update history:
          unsigned hist_val = *history_used;
@@ -202,7 +203,7 @@ btb_vector->insert(btb_vector->begin() + tag_entry, btb_line( historySize, fsmSt
          if (taken){
             hist_val += 1;
          }
-         *history_used = hist_val;
+         *history_used = hist_val & hist_mask;
          
          // update fsm:
          fsm_table_used[fsm_entry].next_state(taken);
@@ -313,7 +314,7 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst){
 	}
 
    // update entry:
-	btb_table->update_entry(pc, targetPc, taken, pred_dst, tag_pc);
+	btb_table->update_entry(pc >> 2, targetPc, taken, pred_dst, tag_pc);
    return;
 }
 
