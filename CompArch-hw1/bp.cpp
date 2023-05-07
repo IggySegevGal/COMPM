@@ -131,6 +131,7 @@ public:
    unsigned flush_num;           // Machine flushes
 	unsigned br_num;      	      // Number of branch instructions
 	unsigned size;	
+   unsigned tagSize;
    // constructors
 btb(){}
     
@@ -273,6 +274,7 @@ int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize, unsigned f
          btb_table->Shared = Shared;
          btb_table->historySize = historySize;
          btb_table->fsmState = fsmState;
+         btb_table->tagSize = tagSize;
          btb_table->flush_num = 0;
          btb_table->br_num = 0;
 
@@ -327,9 +329,9 @@ void BP_GetStats(SIM_stats *curStats){
 	int valid = 1;
 	int ADDRR = 30;
 	
-	if(btb_table.isGlobalHist){
+	if(btb_table->isGlobalHist){
 		
-		if(btb_table.isGlobalTable){
+		if(btb_table->isGlobalTable){
 			predictor_size = (btb_table->btbSize)*(valid+ btb_table->tagSize + ADDRR ) + btb_table->historySize + int(2*pow(2,btb_table->historySize));				
 		}
 		
@@ -341,7 +343,7 @@ void BP_GetStats(SIM_stats *curStats){
 	
 	else{
 		
-		if(btb_table.isGlobalTable){
+		if(btb_table->isGlobalTable){
 		predictor_size = (btb_table->btbSize)*(valid + btb_table->tagSize + ADDRR ) + (btb_table->btbSize)*(btb_table->historySize) + int(2*pow(2,btb_table->historySize));	
 		}
 		
