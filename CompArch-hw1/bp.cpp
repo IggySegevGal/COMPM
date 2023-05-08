@@ -14,14 +14,14 @@ using namespace std;
 #define not_using_share 0
 
 unsigned max_tag_size = pow(2,31);
-unsigned max_fsm_table_size = 256;
+const unsigned max_fsm_table_size = 256;
 unsigned tag_mask;
 unsigned hist_mask;
 
 class fsm { 
-   private:
+ public:  
       unsigned fsmState;
-   public:  
+   
       // constructors
       fsm(){
       }
@@ -245,8 +245,9 @@ public:
       unsigned fsm_entry;
       unsigned tag_entry = pc % btbSize;
       // not in table - return pc + 4 and false
-      if ((btb_array[tag_entry]).tag == max_tag_size){ // entry is null
+      if ((btb_array[tag_entry]).tag != tag_pc){ // entry is null
          *dst = (pc<<2)+4;
+	//printf("fsm_entry: %d", this->global_history);
          return false; // not found
       }
       // in table - check if taken:
@@ -277,9 +278,11 @@ public:
       /* last step - get prediction */
       if(fsm_table_used[fsm_entry].get_pred()){ // taken
          *dst = btb_array[tag_entry].pred_dst;
+	//printf("fsm_entry: %d", fsm_entry);
          return true; // found and taken
       }
          *dst = (pc<<2)+4;
+	//printf("fsm_entry: %d", fsm_entry);
          return false; // not taken
       }
    };
