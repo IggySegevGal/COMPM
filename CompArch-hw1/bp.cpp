@@ -3,7 +3,6 @@
 
 #include "bp_api.h"
 #include <cmath>
-#include <vector>
 #include <iostream>
 using namespace std;
 #define SNT 0
@@ -14,6 +13,7 @@ using namespace std;
 #define using_share_mid 2
 #define not_using_share 0
 
+unsigned max_tag_size = pow(2,31);
 unsigned tag_mask;
 unsigned hist_mask;
 
@@ -92,7 +92,17 @@ public:
 
 
    // constructors
-   btb_line(unsigned historySize, unsigned fsmState,
+   btb_line(){
+      this->tag = max_tag_size;
+
+   }
+
+    // destructor
+    ~btb_line(){
+      //delete[] fsm_table;
+    }
+
+    init_line(unsigned historySize, unsigned fsmState,
 			bool isGlobalHist, bool isGlobalTable, uint32_t tag_pc, uint32_t targetPc){ // updates only tag & pred_dst
          // initializes fsm_table and history to zero !!!!
          /* init local history if isGlobalHist is false: */
@@ -108,10 +118,20 @@ public:
          }
    }
 
-    // destructor
-    ~btb_line(){
-      //delete[] fsm_table;
-    }
+   update_line(unsigned historySize, unsigned fsmState,
+			bool isGlobalHist, bool isGlobalTable, uint32_t tag_pc, uint32_t targetPc){ // updates only tag & pred_dst
+         // updates fsm_table and history to zero !!!!
+         /* init local history if isGlobalHist is false: */
+         this->tag = tag_pc;
+         this->pred_dst = targetPc;
+         this->history = 0;
+         if (!isGlobalTable){ /* this table holds the fsm state for each history*/
+            for (int i = 0; i < (pow(2, historySize)); i++) {
+               // need to check **************************************
+               fsm_table[i] = fsm(fsmState);
+            }
+         }
+   }
 
 
 };
@@ -119,7 +139,7 @@ public:
 // classes btb_line and btb:
 class btb { 
 public:
-   vector<btb_line> *btb_vector;
+   btb_line btb_array[32]; //max size
    unsigned global_history;
    fsm *global_fsm_table;
    unsigned btbSize;
@@ -133,7 +153,7 @@ public:
 	unsigned size;	
    unsigned tagSize;
    // constructors
-btb(){}
+   btb(){}
     
     // destructor
     ~btb(){
@@ -147,19 +167,19 @@ btb(){}
          fsm *fsm_table_used;
          unsigned fsm_entry;
          unsigned tag_entry = pc % btbSize;
-         bool same_tag = true;
          // not in table - create line:
-         if ((btb_vector[tag_entry]).empty()){ // entry is null
+         if ((btb_array[tag_entry]).tag == max_tag_size)){ // entry is null
             // init line
-btb_vector->insert(btb_vector->begin() + tag_entry, btb_line( historySize, fsmState, isGlobalHist, isGlobalTable, tag_pc, targetPc));
-            same_tag = false;
+            //btb_vector->insert(btb_vector->begin() + tag_entry, btb_line( historySize, fsmState, isGlobalHist, isGlobalTable, tag_pc, targetPc));
+            // update empty line with new values
+            (btb_array[tag_entry]).init_line(historySize, fsmState, isGlobalHist, isGlobalTable, tag_pc, targetPc)
          }
-         else if (((*btb_vector)[tag_entry]).tag != tag_pc){ // need to delete line (different tag)
+         else if ((btb_array[tag_entry]).tag != tag_pc){ // need to delete line (different tag)
             // destroy line:
-            btb_vector->erase(btb_vector->begin() + tag_entry);
+            //btb_vector->erase(btb_vector->begin() + tag_entry);
             // init new line:
-btb_vector->insert(btb_vector->begin() + tag_entry, btb_line( historySize, fsmState, isGlobalHist, isGlobalTable, tag_pc, targetPc));
-            same_tag = false;
+            //btb_vector->insert(btb_vector->begin() + tag_entry, btb_line( historySize, fsmState, isGlobalHist, isGlobalTable, tag_pc, targetPc));
+            (btb_array[tag_entry]).update_line(historySize, fsmState, isGlobalHist, isGlobalTable, tag_pc, targetPc)
             //if (taken) {
             //   this->flush_num++;
             //}
@@ -170,14 +190,14 @@ btb_vector->insert(btb_vector->begin() + tag_entry, btb_line( historySize, fsmSt
             history_used = &this->global_history;
          }
          else { // local history
-            history_used = &(*btb_vector)[tag_entry].history;
+            history_used = &btb_array[tag_entry].history;
          }
          /* second step - find fsm_table */
          if (isGlobalTable){ // choose global fsm_table
             fsm_table_used = this->global_fsm_table;
          }
          else { // local fsm_table
-            fsm_table_used = (*btb_vector)[tag_entry].fsm_table;
+            fsm_table_used = btb_array[tag_entry].fsm_table;
          }
          /* third step - check if shared or not */
          if (Shared == using_share_lsb){
@@ -191,7 +211,7 @@ btb_vector->insert(btb_vector->begin() + tag_entry, btb_line( historySize, fsmSt
          }
 
          // update history and fsm:
-(*btb_vector)[tag_entry].pred_dst = targetPc;
+         btb_array[tag_entry].pred_dst = targetPc;
          //if (same_tag){ // check target prediction
            // if (targetPc != pred_dst) { // wrong prediction
              //  (*btb_vector)[tag_entry].pred_dst = targetPc;
@@ -218,7 +238,7 @@ btb_vector->insert(btb_vector->begin() + tag_entry, btb_line( historySize, fsmSt
       unsigned fsm_entry;
       unsigned tag_entry = pc % btbSize;
       // not in table - return pc + 4 and false
-      if (btb_vector[tag_entry].empty()){ // entry is null
+      if ((btb_array[tag_entry]).tag == max_tag_size){ // entry is null
          *dst = (pc<<2)+4;
          return false; // not found
       }
@@ -228,14 +248,14 @@ btb_vector->insert(btb_vector->begin() + tag_entry, btb_line( historySize, fsmSt
          history_used = this->global_history;
       }
       else { // local history
-         history_used = (*btb_vector)[tag_entry].history;
+         history_used = btb_array[tag_entry].history;
       }
       /* second step - find fsm_table */
       if (isGlobalTable){ // choose global fsm_table
          fsm_table_used = this->global_fsm_table;
       }
       else { // local fsm_table
-         fsm_table_used = (*btb_vector)[tag_entry].fsm_table;
+         fsm_table_used = btb_array[tag_entry].fsm_table;
       }
       /* third step - check if shared or not */
       if (Shared == using_share_lsb){
@@ -249,7 +269,7 @@ btb_vector->insert(btb_vector->begin() + tag_entry, btb_line( historySize, fsmSt
       }
       /* last step - get prediction */
       if(fsm_table_used[fsm_entry].get_pred()){ // taken
-         *dst = (*btb_vector)[tag_entry].pred_dst;
+         *dst = btb_array[tag_entry].pred_dst;
          return true; // found and taken
       }
          *dst = (pc<<2)+4;
@@ -260,14 +280,14 @@ btb_vector->insert(btb_vector->begin() + tag_entry, btb_line( historySize, fsmSt
 
 /* -------------------------------------------------------------------- */
 
-btb *btb_table = new btb[1];
+btb *btb_table;
 
 int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize, unsigned fsmState,
 			bool isGlobalHist, bool isGlobalTable, int Shared){
             /* init btb table */
             *btb_table = btb();
 		         /* init btb table - vector of btb lines: */
-         btb_table->btb_vector = new vector<btb_line> [btbSize];
+         //btb_table->btb_vector = new vector<btb_line> [btbSize];
          btb_table->btbSize = btbSize;
          btb_table->isGlobalHist = isGlobalHist;
          btb_table->isGlobalTable = isGlobalTable;
