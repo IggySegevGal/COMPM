@@ -102,7 +102,7 @@ public:
       //delete[] fsm_table;
     }
 
-    init_line(unsigned historySize, unsigned fsmState,
+    void init_line(unsigned historySize, unsigned fsmState,
 			bool isGlobalHist, bool isGlobalTable, uint32_t tag_pc, uint32_t targetPc){ // updates only tag & pred_dst
          // initializes fsm_table and history to zero !!!!
          /* init local history if isGlobalHist is false: */
@@ -116,9 +116,10 @@ public:
                fsm_table[i] = fsm(fsmState);
             }
          }
+         return;
    }
 
-   update_line(unsigned historySize, unsigned fsmState,
+   void update_line(unsigned historySize, unsigned fsmState,
 			bool isGlobalHist, bool isGlobalTable, uint32_t tag_pc, uint32_t targetPc){ // updates only tag & pred_dst
          // updates fsm_table and history to zero !!!!
          /* init local history if isGlobalHist is false: */
@@ -131,6 +132,7 @@ public:
                fsm_table[i] = fsm(fsmState);
             }
          }
+         return;
    }
 
 
@@ -168,18 +170,18 @@ public:
          unsigned fsm_entry;
          unsigned tag_entry = pc % btbSize;
          // not in table - create line:
-         if ((btb_array[tag_entry]).tag == max_tag_size)){ // entry is null
+         if ((btb_array[tag_entry]).tag == max_tag_size){ // entry is null
             // init line
             //btb_vector->insert(btb_vector->begin() + tag_entry, btb_line( historySize, fsmState, isGlobalHist, isGlobalTable, tag_pc, targetPc));
             // update empty line with new values
-            (btb_array[tag_entry]).init_line(historySize, fsmState, isGlobalHist, isGlobalTable, tag_pc, targetPc)
+            (btb_array[tag_entry]).init_line(historySize, fsmState, isGlobalHist, isGlobalTable, tag_pc, targetPc);
          }
          else if ((btb_array[tag_entry]).tag != tag_pc){ // need to delete line (different tag)
             // destroy line:
             //btb_vector->erase(btb_vector->begin() + tag_entry);
             // init new line:
             //btb_vector->insert(btb_vector->begin() + tag_entry, btb_line( historySize, fsmState, isGlobalHist, isGlobalTable, tag_pc, targetPc));
-            (btb_array[tag_entry]).update_line(historySize, fsmState, isGlobalHist, isGlobalTable, tag_pc, targetPc)
+            (btb_array[tag_entry]).update_line(historySize, fsmState, isGlobalHist, isGlobalTable, tag_pc, targetPc);
             //if (taken) {
             //   this->flush_num++;
             //}
