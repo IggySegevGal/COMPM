@@ -265,7 +265,7 @@ btb *btb_table = new btb[1];
 int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize, unsigned fsmState,
 			bool isGlobalHist, bool isGlobalTable, int Shared){
             /* init btb table */
-            btb_table[0] = btb();
+            *btb_table = btb();
 		         /* init btb table - vector of btb lines: */
          btb_table->btb_vector = new vector<btb_line> [btbSize];
          btb_table->btbSize = btbSize;
