@@ -14,7 +14,7 @@ using namespace std;
 #define not_using_share 0
 
 unsigned max_tag_size = pow(2,31);
-unsigned max_fsm_table_size = pow(2,8);
+unsigned max_fsm_table_size = 256;
 unsigned tag_mask;
 unsigned hist_mask;
 
@@ -134,7 +134,7 @@ public:
          if (!isGlobalTable){ /* this table holds the fsm state for each history*/
             for (int i = 0; i < (pow(2, historySize)); i++) {
                // need to check **************************************
-               fsm_table[i] = set_state(fsmState);
+               fsm_table[i].set_state(fsmState);
             }
          }
          return;
