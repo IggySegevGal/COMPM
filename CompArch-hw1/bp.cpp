@@ -282,33 +282,33 @@ public:
 
 /* -------------------------------------------------------------------- */
 
-btb *btb_table;
+btb btb_table;
 
 int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize, unsigned fsmState,
 			bool isGlobalHist, bool isGlobalTable, int Shared){
             /* init btb table */
-            *btb_table = btb();
+            //*btb_table = ;
 		         /* init btb table - vector of btb lines: */
          //btb_table->btb_vector = new vector<btb_line> [btbSize];
-         btb_table->btbSize = btbSize;
-         btb_table->isGlobalHist = isGlobalHist;
-         btb_table->isGlobalTable = isGlobalTable;
-         btb_table->Shared = Shared;
-         btb_table->historySize = historySize;
-         btb_table->fsmState = fsmState;
-         btb_table->tagSize = tagSize;
-         btb_table->flush_num = 0;
-         btb_table->br_num = 0;
+         btb_table.btbSize = btbSize;
+         btb_table.isGlobalHist = isGlobalHist;
+         btb_table.isGlobalTable = isGlobalTable;
+         btb_table.Shared = Shared;
+         btb_table.historySize = historySize;
+         btb_table.fsmState = fsmState;
+         btb_table.tagSize = tagSize;
+         btb_table.flush_num = 0;
+         btb_table.br_num = 0;
 
          /* init global history if isGlobalHist is true: */
          if (isGlobalHist){
-            btb_table->global_history = 0;
+            btb_table.global_history = 0;
          }
          if (isGlobalTable){ /* this table holds the fsm state for each history*/
-            btb_table->global_fsm_table = new fsm (pow(2, historySize));
+            btb_table.global_fsm_table = new fsm (pow(2, historySize));
             for (int i = 0; i < pow(2, historySize); i++) {
                // need to check **************************************
-               btb_table->global_fsm_table[i] = fsm(fsmState);
+               btb_table.global_fsm_table[i] = fsm(fsmState);
             }
          }
 
@@ -325,52 +325,52 @@ bool BP_predict(uint32_t pc, uint32_t *dst){
    if taken - return true, dst->pred_dst
    if not taken - return false, dst-> pc+4  */
    /* if pc tag is not in btb return false, dst-> pc+4 */
-   uint32_t tag_pc = ((pc>>2) / btb_table->btbSize) & tag_mask;
-	return btb_table->find_entry_return_pred( pc>>2 ,tag_pc , dst);
+   uint32_t tag_pc = ((pc>>2) / btb_table.btbSize) & tag_mask;
+	return btb_table.find_entry_return_pred( pc>>2 ,tag_pc , dst);
 }
 
 void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst){
-   uint32_t tag_pc = ((pc>>2) / btb_table->btbSize) & tag_mask;
+   uint32_t tag_pc = ((pc>>2) / btb_table.btbSize) & tag_mask;
 
    // check if prediction was correct:
    if((!taken && ((pc + 4) != pred_dst)) || (taken && (targetPc != pred_dst))){ 
-		btb_table->flush_num++;
+		btb_table.flush_num++;
 	}
 
    // update entry:
-	btb_table->update_entry(pc >> 2, targetPc, taken, pred_dst, tag_pc);
+	btb_table.update_entry(pc >> 2, targetPc, taken, pred_dst, tag_pc);
    return;
 }
 
 void BP_GetStats(SIM_stats *curStats){
-   curStats->flush_num = btb_table->flush_num;
-   curStats->br_num = btb_table->br_num;
+   curStats->flush_num = btb_table.flush_num;
+   curStats->br_num = btb_table.br_num;
 
    int predictor_size = 0;
 	
 	int valid = 1;
 	int ADDRR = 30;
 	
-	if(btb_table->isGlobalHist){
+	if(btb_table.isGlobalHist){
 		
-		if(btb_table->isGlobalTable){
-			predictor_size = (btb_table->btbSize)*(valid+ btb_table->tagSize + ADDRR ) + btb_table->historySize + int(2*pow(2,btb_table->historySize));				
+		if(btb_table.isGlobalTable){
+			predictor_size = (btb_table.btbSize)*(valid+ btb_table.tagSize + ADDRR ) + btb_table.historySize + int(2*pow(2,btb_table.historySize));				
 		}
 		
 		else{
-			predictor_size = (btb_table->btbSize)*(valid+btb_table->tagSize + ADDRR ) + (btb_table->btbSize)*int(2*pow(2,btb_table->historySize)) + btb_table->historySize;	
+			predictor_size = (btb_table.btbSize)*(valid+btb_table.tagSize + ADDRR ) + (btb_table.btbSize)*int(2*pow(2,btb_table.historySize)) + btb_table.historySize;	
 		}
 				
 	}
 	
 	else{
 		
-		if(btb_table->isGlobalTable){
-		predictor_size = (btb_table->btbSize)*(valid + btb_table->tagSize + ADDRR ) + (btb_table->btbSize)*(btb_table->historySize) + int(2*pow(2,btb_table->historySize));	
+		if(btb_table.isGlobalTable){
+		predictor_size = (btb_table.btbSize)*(valid + btb_table.tagSize + ADDRR ) + (btb_table.btbSize)*(btb_table.historySize) + int(2*pow(2,btb_table.historySize));	
 		}
 		
 		else{
-			predictor_size = (btb_table->btbSize)*(valid + btb_table->tagSize + ADDRR ) + (btb_table->btbSize)*(btb_table->historySize) + int((btb_table->btbSize)*2*pow(2,btb_table->historySize));
+			predictor_size = (btb_table.btbSize)*(valid + btb_table.tagSize + ADDRR ) + (btb_table.btbSize)*(btb_table.historySize) + int((btb_table.btbSize)*2*pow(2,btb_table.historySize));
 		}
 	}
 
