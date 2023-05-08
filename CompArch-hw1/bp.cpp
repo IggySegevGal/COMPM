@@ -22,8 +22,7 @@ class fsm {
       unsigned fsmState;
    public:  
       // constructors
-      fsm(unsigned fsm_init_state){
-         this->fsmState = fsm_init_state;
+      fsm(){
       }
     
       // destructor
@@ -46,6 +45,11 @@ class fsm {
    }
    
     // setters
+    void set_state(unsigned fsm_init_state){
+      this->fsmState = fsm_init_state;
+      return;
+    }
+
     void next_state(bool taken){
       if(this->fsmState == SNT){ // Strongly not taken - return false
          if(taken == 1){ // taken
@@ -87,7 +91,7 @@ class btb_line {
 public:  
    unsigned tag;
    unsigned history;
-   fsm *fsm_table;
+   fsm fsm_table[pow(2,8)];
    uint32_t pred_dst; // predicted target address
 
 
@@ -110,10 +114,10 @@ public:
          this->pred_dst = targetPc;
          this->history = 0;
          if (!isGlobalTable){ /* this table holds the fsm state for each history*/
-            fsm_table = new fsm (pow(2, historySize));
+            //fsm_table = new fsm (pow(2, historySize));
             for (int i = 0; i < (pow(2, historySize)); i++) {
                // need to check **************************************
-               fsm_table[i] = fsm(fsmState);
+               fsm_table[i] = set_state(fsmState);
             }
          }
          return;
@@ -129,7 +133,7 @@ public:
          if (!isGlobalTable){ /* this table holds the fsm state for each history*/
             for (int i = 0; i < (pow(2, historySize)); i++) {
                // need to check **************************************
-               fsm_table[i] = fsm(fsmState);
+               fsm_table[i] = set_state(fsmState);
             }
          }
          return;
@@ -143,7 +147,7 @@ class btb {
 public:
    btb_line btb_array[32]; //max size
    unsigned global_history;
-   fsm *global_fsm_table;
+   fsm fsm_table[pow(2,8)];
    unsigned btbSize;
    bool isGlobalHist;
    bool isGlobalTable;
@@ -196,10 +200,10 @@ public:
          }
          /* second step - find fsm_table */
          if (isGlobalTable){ // choose global fsm_table
-            fsm_table_used = this->global_fsm_table;
+            fsm_table_used = &(this->global_fsm_table);
          }
          else { // local fsm_table
-            fsm_table_used = btb_array[tag_entry].fsm_table;
+            fsm_table_used = &(btb_array[tag_entry].fsm_table);
          }
          /* third step - check if shared or not */
          if (Shared == using_share_lsb){
@@ -254,10 +258,10 @@ public:
       }
       /* second step - find fsm_table */
       if (isGlobalTable){ // choose global fsm_table
-         fsm_table_used = this->global_fsm_table;
+         fsm_table_used = &(this->global_fsm_table);
       }
       else { // local fsm_table
-         fsm_table_used = btb_array[tag_entry].fsm_table;
+         fsm_table_used = &(btb_array[tag_entry].fsm_table);
       }
       /* third step - check if shared or not */
       if (Shared == using_share_lsb){
@@ -305,10 +309,10 @@ int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize, unsigned f
             btb_table.global_history = 0;
          }
          if (isGlobalTable){ /* this table holds the fsm state for each history*/
-            btb_table.global_fsm_table = new fsm (pow(2, historySize));
+            //btb_table.global_fsm_table = new fsm (pow(2, historySize));
             for (int i = 0; i < pow(2, historySize); i++) {
                // need to check **************************************
-               btb_table.global_fsm_table[i] = fsm(fsmState);
+               btb_table.global_fsm_table[i] = set_state(fsmState);
             }
          }
 
