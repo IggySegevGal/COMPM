@@ -14,7 +14,7 @@ using namespace std;
 #define not_using_share 0
 
 unsigned max_tag_size = pow(2,31);
-unsigned max_fsm_table_size = 256;
+const unsigned max_fsm_table_size = 256;
 unsigned tag_mask;
 unsigned hist_mask;
 
@@ -56,6 +56,7 @@ class fsm {
          if(taken == 1){ // taken
             this->fsmState = WNT;
          }
+         else{}
          return;
       }
       else if (this->fsmState == WNT) { // Weakly not taken - return false 
