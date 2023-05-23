@@ -5,8 +5,8 @@
 #include <fstream>
 #include <sstream>
 #include <limits.h>
-//#include <cmath.h>
-
+#include <cmath>
+#include <vector>
 using std::FILE;
 using std::string;
 using std::cout;
@@ -14,19 +14,20 @@ using std::endl;
 using std::cerr;
 using std::ifstream;
 using std::stringstream;
-using std::vector;
-using std::cmath; // need to checkkkkkkkkkkkkkkkkk
+using namespace std;
+//using std::vector;
+//using std::cmath; // need to checkkkkkkkkkkkkkkkkk
 
 /* statistics struct */
 
 /* A structure to return information about the currect simulator state */
 typedef struct {
-	double L1Miss = 0;
-	double L1Hit = 0;
-	double L2Miss = 0;
-	double L2Hit = 0;
-	double AccTime = 0;
-	double AccNum = 0;
+	double L1Miss;
+	double L1Hit;
+	double L2Miss;
+	double L2Hit;
+	double AccTime;
+	double AccNum;
 } SIM_stats;
 
 /* ---------------------------------------------------- cache_line class ------------------------------------------------ */
@@ -34,7 +35,7 @@ class cache_line {
 public:
 unsigned long int address;
 unsigned long int tag;
-unsigned dirty_bit;
+bool dirty;
 unsigned set;
 
 
@@ -42,7 +43,7 @@ unsigned set;
    cache_line(){
 	this->address = ULONG_MAX; // init to maximum value of unsigned long int, assuming addersses are aligned to 4 
 	this->tag = ULONG_MAX; // init to maximum value of unsigned long int, assuming block size is never zero bits
-	this->dirty_bit = 0;
+	this->dirty = 0;
    }
     
     // destructor
@@ -54,9 +55,9 @@ unsigned set;
 		// calculate setBits from sets:
 		unsigned setBits = log2(sets);
 		this->set = (address >> BSize) % sets;
-		this->dirty_bit = 0;
+		this->dirty = 0;
 		if (operation == 'W'){
-			this->dirty_bit = 1;
+			this->dirty = 1;
 		}
 		this->address = address;
 		this->tag = address >> (setBits+BSize); // shift right to remove bits of block size, set size
@@ -76,7 +77,7 @@ unsigned LCy;
 unsigned WrAlloc;
 unsigned ways;
 unsigned sets;
-vector<vector<cache_line>> cache_table; // sets X ways [cache_line] 
+std::vector<std::vector<cache_line> > cache_table; // sets X ways [cache_line] 
 // vector<unsigned> lru_vec; // for each set
 
    // constructors
@@ -98,7 +99,7 @@ vector<vector<cache_line>> cache_table; // sets X ways [cache_line]
 			this->ways = pow(2,LAssoc);
 			this->sets = (pow(2,LSize) / pow(2,BSize)) / ways;
 			// init a 1D cache: sets -> number of rows, ways -> number of columns init empty;
-			this->cache_table = cache_table.resize(sets);//, vector<cache_line>(ways)); // only init sets, not ways
+			this->cache_table.resize(sets);//, vector<cache_line>(ways)); // only init sets, not ways
 			//this->lru_vec = lru_vec.resize(sets);
 	}
 
@@ -106,7 +107,8 @@ vector<vector<cache_line>> cache_table; // sets X ways [cache_line]
 	cache_line create_cache_line(unsigned long int address, char operation){
 		// create cache_line object and initialize it:
 		cache_line tmp_cache_line;
-		return tmp_cache_line.init_line( address, operation, this->sets, this->BSize);
+ 		tmp_cache_line.init_line( address, operation, this->sets, this->BSize);
+		return tmp_cache_line;
 	}
 
    	void push_back_line(cache_line line){
@@ -118,7 +120,7 @@ vector<vector<cache_line>> cache_table; // sets X ways [cache_line]
 	bool erase_cache_line(cache_line line){ 
 		// erase line:
 		bool res = false;
-		vector<cache_line>::iterator it;
+		std::vector<cache_line>::iterator it;
         for (it = cache_table[line.set].begin() ; it != cache_table[line.set].end(); ++it){
             if (it->tag == line.tag){
 				res = it->dirty;
@@ -132,7 +134,7 @@ vector<vector<cache_line>> cache_table; // sets X ways [cache_line]
 	void update_LRU(cache_line line){ // erase and push back
 		// erase line:
 		if(erase_cache_line(line)){ // line was dirty
-			line->dirty = 1;
+			line.dirty = 1;
 		}
 		// push back to cache:
 		push_back_line( line);
@@ -168,18 +170,20 @@ void handle_command(unsigned long int address, char operation,cache_class L1,cac
 		L1.update_LRU( L1_newline);// update LRU, update Dirty if write
 	} 
 	else if ((L1.is_exist(L1_newline) == -1) && (L2.is_exist(L1_newline) != -1)) { // miss L1 hit L2
-		if ((L1.WrAlloc && operation='W') || (operation='R')){ // L1 WA: (WA && operation='W') || (operation='R')
+		if ((L1.WrAlloc && operation=='W') || (operation=='R')){ // L1 WA: (WA && operation=='W') || (operation=='R')
 		
 			L2.update_LRU(L2_newline); // update LRU L2 with new
 			if (L1.cache_table[L1_newline.set].size() == L1.ways){ // if L1 set is full:
-				cache_line tmp_line = L1.cache_table[L1_newline.set].begin();
-				if(tmp_line->dirty != 1){//not dirty:
-					 L1.cache_table[L1_newline.set].erase(tmp_line); // remove first element in set from L1
+				cache_line tmp_line = *L1.cache_table[L1_newline.set].begin();
+				if(tmp_line.dirty != 1){//not dirty:
+					// L1.cache_table[tmp_line.set].erase(tmp_line); // remove first element in set from L1
+					L1.erase_cache_line(tmp_line); // remove first element in set from L1
 				}
 				else{ //dirty: 
 					// write first element in set from L1 to L2 and then remove from L1 update LRU L2 with removed
 					
-					L1.cache_table[L1_newline.set].erase(tmp_line); // remove first element in set from L1
+					//L1.cache_table[tmp_line.set].erase(tmp_line); // remove first element in set from L1
+					L1.erase_cache_line(tmp_line); // remove first element in set from L1
 					if(L2.cache_table[L1_newline.set].size() == L2.ways){ // L2 is full
 						L2.cache_table[L1_newline.set].erase(L2.cache_table[L1_newline.set].begin()); // remove first element from L2 LRU 
 					}
@@ -203,12 +207,12 @@ void handle_command(unsigned long int address, char operation,cache_class L1,cac
 			L2.update_LRU( L2_newline);
 		}
 	}
-	else if(){ // miss L1 miss L2
+	else if((L1.is_exist(L1_newline) == -1) && (L2.is_exist(L1_newline) == -1)){ // miss L1 miss L2
 			if ((operation =='R') || (L1.WrAlloc && L2.WrAlloc) || (L1.WrAlloc && !L2.WrAlloc)){ // L1 WA L2 WA  or // L1 WA L2 NWA or (operation='R')
 				if(L2.cache_table[L1_newline.set].size() == L2.ways){ // if L2 set is full:
 					//not dirty: remove first element in set from L2
 					 
-					if (L2.cache_table[L1_newline.set].begin().dirty == 1){ //dirty: write first element in set from L2 to mem and then remove from L2
+					if (L2.cache_table[L1_newline.set].begin()->dirty == 1){ //dirty: write first element in set from L2 to mem and then remove from L2
 						// mem access
 					}
 					L2.cache_table[L1_newline.set].erase(L2.cache_table[L1_newline.set].begin());
@@ -216,14 +220,16 @@ void handle_command(unsigned long int address, char operation,cache_class L1,cac
 				}
 				L2.push_back_line(L1_newline); //insert line to L2 and update LRU L2
 				if (L1.cache_table[L1_newline.set].size() == L1.ways){ // if L1 set is full:
-					cache_line tmp_line = L1.cache_table[L1_newline.set].begin();
-					if(tmp_line->dirty != 1){//not dirty:
-						L1.cache_table[L1_newline.set].erase(tmp_line); // remove first element in set from L1
+					cache_line tmp_line = *L1.cache_table[L1_newline.set].begin();
+					if(tmp_line.dirty != 1){//not dirty:
+						L1.erase_cache_line(tmp_line); // remove first element in set from L1						
+						//L1.cache_table[L1_newline.set].erase(tmp_line); // remove first element in set from L1
 					}
 					else{ //dirty: 
 						// write first element in set from L1 to L2 and then remove from L1 update LRU L2 with removed
 						
-						L1.cache_table[L1_newline.set].erase(tmp_line); // remove first element in set from L1
+						L1.erase_cache_line(tmp_line); // remove first element in set from L1
+						//L1.cache_table[L1_newline.set].erase(tmp_line); // remove first element in set from L1
 						if(L2.cache_table[L1_newline.set].size() == L2.ways){ // L2 is full
 							L2.cache_table[L1_newline.set].erase(L2.cache_table[L1_newline.set].begin()); // remove first element from L2 LRU 
 						}
@@ -242,7 +248,7 @@ void handle_command(unsigned long int address, char operation,cache_class L1,cac
 				if(L2.cache_table[L1_newline.set].size() == L2.ways){ // if L2 set is full:
 					//not dirty: remove first element in set from L2
 					 
-					if (L2.cache_table[L1_newline.set].begin().dirty == 1){ //dirty: write first element in set from L2 to mem and then remove from L2
+					if (L2.cache_table[L1_newline.set].begin()->dirty == 1){ //dirty: write first element in set from L2 to mem and then remove from L2
 						// mem access
 					}
 					L2.cache_table[L1_newline.set].erase(L2.cache_table[L1_newline.set].begin());
