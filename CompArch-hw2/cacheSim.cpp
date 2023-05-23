@@ -58,7 +58,7 @@ unsigned set;
 		unsigned setBits = log2(sets);
 		this->set = (address >> BSize) % sets;
 		this->dirty = 0;
-		if (operation == 'W'){
+		if (operation == 'w'){
 			this->dirty = 1;
 		}
 		this->address = address;
@@ -148,14 +148,14 @@ std::vector<std::vector<cache_line> > cache_table; // sets X ways [cache_line]
 		vector<cache_line>::iterator it;
 		int i = 0;
         for (it = cache_table[line.set].begin() ; it != cache_table[line.set].end(); ++it){
-		cout << "hey" << endl;
+		//cout << "hey" << endl;
             if (it->tag == line.tag){
                 cache_table[line.set].erase(it);
 				return i;
             }
 			i++;
     	}
-		cout << "bye" << endl;
+		//cout << "bye" << endl;
 		return -1;
 	}
 
@@ -181,7 +181,7 @@ void handle_command(unsigned long int address, char operation){
 		stats.L1Miss++;
 		stats.L2Hit++;
 		stats.AccTime += L1.LCy + L2.LCy;
-		if ((L1.WrAlloc && operation=='W') || (operation=='R')){ // L1 WA: (WA && operation=='W') || (operation=='R')
+		if ((L1.WrAlloc && operation=='w') || (operation=='r')){ // L1 WA: (WA && operation=='W') || (operation=='R')
 		
 			L2.update_LRU(L2_newline); // update LRU L2 with new
 			if (L1.cache_table[L1_newline.set].size() == L1.ways){ // if L1 set is full:
@@ -196,13 +196,18 @@ void handle_command(unsigned long int address, char operation){
 					
 					//L1.cache_table[tmp_line.set].erase(tmp_line); // remove first element in set from L1
 					L1.erase_cache_line(tmp_line); // remove first element in set from L1
-					if(L2.cache_table[L2_newline.set].size() == L2.ways){ // L2 is full
-						L2.cache_table[L2_newline.set].erase(L2.cache_table[L2_newline.set].begin()); // remove first element from L2 LRU 
-					}
+					
 					if(L2.is_exist(tmp_lineL2)){ // insert old L1 element to L2
 						L2.update_LRU( tmp_lineL2);// update LRU, update Dirty if write
 					}
 					else{
+						if(L2.cache_table[L2_newline.set].size() == L2.ways){ // L2 is full
+							cache_line tmp_L1 = L1.create_cache_line(L2.cache_table[L2_newline.set].begin()->address, operation);
+								if(L1.is_exist(tmp_L1)){ // if in L1 - remove from L1
+									L1.erase_cache_line(tmp_L1);
+								}
+							L2.cache_table[L2_newline.set].erase(L2.cache_table[L2_newline.set].begin()); // remove first element from L2 LRU 
+						}
 						L2.push_back_line(tmp_lineL2); // push back to L2
 					}
 				}
@@ -223,14 +228,14 @@ void handle_command(unsigned long int address, char operation){
 		stats.L1Miss++;
 		stats.L2Miss++;
 		stats.AccTime += L1.LCy + L2.LCy + L2.MemCyc;
-			if ((operation =='R') || (L1.WrAlloc && L2.WrAlloc) || (L1.WrAlloc && !L2.WrAlloc)){ // L1 WA L2 WA  or // L1 WA L2 NWA or (operation='R')
+			if ((operation =='r') || (L1.WrAlloc && L2.WrAlloc) || (L1.WrAlloc && !L2.WrAlloc)){ // L1 WA L2 WA  or // L1 WA L2 NWA or (operation='R')
 				if(L2.cache_table[L2_newline.set].size() == L2.ways){ // if L2 set is full:
 					//not dirty: remove first element in set from L2
-					 
-					if (L2.cache_table[L2_newline.set].begin()->dirty == 1){ //dirty: write first element in set from L2 to mem and then remove from L2
-						// mem access
-					}
-					L2.cache_table[L2_newline.set].erase(L2.cache_table[L1_newline.set].begin());
+					 cache_line tmp_L1 = L1.create_cache_line(L2.cache_table[L2_newline.set].begin()->address, operation);
+							if(L1.is_exist(tmp_L1)){ // if in L1 - remove from L1
+								L1.erase_cache_line(tmp_L1);
+							}
+					L2.cache_table[L2_newline.set].erase(L2.cache_table[L2_newline.set].begin());
 					
 				}
 				L2.push_back_line(L2_newline); //insert line to L2 and update LRU L2
@@ -247,6 +252,10 @@ void handle_command(unsigned long int address, char operation){
 						L1.erase_cache_line(tmp_line); // remove first element in set from L1
 						//L1.cache_table[L1_newline.set].erase(tmp_line); // remove first element in set from L1
 						if(L2.cache_table[L2_newline.set].size() == L2.ways){ // L2 is full
+							cache_line tmp_L1 = L1.create_cache_line(L2.cache_table[L2_newline.set].begin()->address, operation);
+							if(L1.is_exist(tmp_L1)){ // if in L1 - remove from L1
+								L1.erase_cache_line(tmp_L1);
+							}
 							L2.cache_table[L2_newline.set].erase(L2.cache_table[L2_newline.set].begin()); // remove first element from L2 LRU 
 						}
 						if(L2.is_exist(tmp_lineL2)){ // insert old L1 element to L2
