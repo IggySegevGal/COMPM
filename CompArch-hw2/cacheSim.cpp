@@ -31,12 +31,7 @@ typedef struct {
 } SIM_stats;
 /* ----- global stats: */
 SIM_stats stats;
-stats.L1Miss = 0 ;
-stats.L1Hit = 0 ;
-stats.L2Miss = 0 ;
-stats.L2Hit = 0 ;
-stats.AccTime = 0 ;
-stats.AccNum = 0 ;
+
 /* ---------------------------------------------------- cache_line class ------------------------------------------------ */
 class cache_line { 
 public:
@@ -101,7 +96,7 @@ std::vector<std::vector<cache_line> > cache_table; // sets X ways [cache_line]
 			this->BSize = BSize;
 			this->LSize = LSize;
 			this->LAssoc = LAssoc;
-			this->LCy = LCy;
+			this->LCy = LCyc;
 			this->WrAlloc = WrAlloc;
 			this->ways = pow(2,LAssoc);
 			this->sets = (pow(2,LSize) / pow(2,BSize)) / ways;
@@ -153,20 +148,24 @@ std::vector<std::vector<cache_line> > cache_table; // sets X ways [cache_line]
 		vector<cache_line>::iterator it;
 		int i = 0;
         for (it = cache_table[line.set].begin() ; it != cache_table[line.set].end(); ++it){
+		cout << "hey" << endl;
             if (it->tag == line.tag){
                 cache_table[line.set].erase(it);
 				return i;
             }
 			i++;
     	}
+		cout << "bye" << endl;
 		return -1;
 	}
 
 
    };
-
+/* ---------------------------------------------------- globals: -------------------------------------------------- */
+cache_class L1;
+cache_class L2;
 /* --------------------------------------------------- general function ------------------------------------------- */
-void handle_command(unsigned long int address, char operation,cache_class L1,cache_class L2,SIM_stats stats){
+void handle_command(unsigned long int address, char operation){
 // prepare new cache lines:
 	cache_line L1_newline = L1.create_cache_line(address, operation);
 	cache_line L2_newline = L2.create_cache_line(address, operation);
@@ -284,10 +283,6 @@ void handle_command(unsigned long int address, char operation,cache_class L1,cac
 
 }
 
-/* ---------------------------------------------------- globals: -------------------------------------------------- */
-cache_class L1;
-cache_class L2;
-SIM_stats stats;
 
 /* ----------------------------------------------------- main ------------------------------------------------------- */
 int main(int argc, char **argv) {
@@ -342,9 +337,16 @@ int main(int argc, char **argv) {
 	/* init caches: */
 	L1.init_class( MemCyc,  BSize ,  L1Size,  L1Assoc,  L1Cyc ,  WrAlloc);
 	L2.init_class( MemCyc,  BSize ,  L2Size,  L2Assoc,  L2Cyc ,  WrAlloc);
+	/* init stats */
+	stats.L1Miss = 0 ;
+	stats.L1Hit = 0 ;
+	stats.L2Miss = 0 ;
+	stats.L2Hit = 0 ;
+	stats.AccTime = 0 ;
+	stats.AccNum = 0 ;
 
 	while (getline(file, line)) {
-		AccNum++; //count commands
+		stats.AccNum++; //count commands
 		stringstream ss(line);
 		string address;
 		char operation = 0; // read (R) or write (W)
@@ -355,24 +357,25 @@ int main(int argc, char **argv) {
 		}
 
 		// DEBUG - remove this line
-		cout << "operation: " << operation;
+		//cout << "operation: " << operation;
 
 		string cutAddress = address.substr(2); // Removing the "0x" part of the address
 
 		// DEBUG - remove this line
-		cout << ", address (hex)" << cutAddress;
+		//cout << ", address (hex)" << cutAddress;
 
 		unsigned long int num = 0;
 		num = strtoul(cutAddress.c_str(), NULL, 16);
 
 		// DEBUG - remove this line
-		cout << " (dec) " << num << endl;
+		//cout << " (dec) " << num << endl;
+		 handle_command( num, operation);
 
 	}
 
 	double L1MissRate = stats.L1Miss/ (stats.L1Miss+stats.L1Hit);
-	double L2MissRate = stats.L2Miss/ (stats.L2Miss+stats.L2Hit);;
-	double avgAccTime = AccTime/AccNum;
+	double L2MissRate = stats.L2Miss/ (stats.L2Miss+stats.L2Hit);
+	double avgAccTime = stats.AccTime/stats.AccNum;
 
 	printf("L1miss=%.03f ", L1MissRate);
 	printf("L2miss=%.03f ", L2MissRate);
