@@ -29,7 +29,14 @@ typedef struct {
 	double AccTime;
 	double AccNum;
 } SIM_stats;
-
+/* ----- global stats: */
+SIM_stats stats;
+stats.L1Miss = 0 ;
+stats.L1Hit = 0 ;
+stats.L2Miss = 0 ;
+stats.L2Hit = 0 ;
+stats.AccTime = 0 ;
+stats.AccNum = 0 ;
 /* ---------------------------------------------------- cache_line class ------------------------------------------------ */
 class cache_line { 
 public:
@@ -167,9 +174,14 @@ void handle_command(unsigned long int address, char operation,cache_class L1,cac
 	// update LRU == (erase and pushback, because most recently used element is last)
 	
 	if (L1.is_exist(L1_newline) != -1){ // hit L1 (write & read)
+		stats.L1Hit++;
+		stats.AccTime += L1.LCy;
 		L1.update_LRU( L1_newline);// update LRU, update Dirty if write
 	} 
 	else if ((L1.is_exist(L1_newline) == -1) && (L2.is_exist(L1_newline) != -1)) { // miss L1 hit L2
+		stats.L1Miss++;
+		stats.L2Hit++;
+		stats.AccTime += L1.LCy + L2.LCy;
 		if ((L1.WrAlloc && operation=='W') || (operation=='R')){ // L1 WA: (WA && operation=='W') || (operation=='R')
 		
 			L2.update_LRU(L2_newline); // update LRU L2 with new
@@ -208,6 +220,9 @@ void handle_command(unsigned long int address, char operation,cache_class L1,cac
 		}
 	}
 	else if((L1.is_exist(L1_newline) == -1) && (L2.is_exist(L1_newline) == -1)){ // miss L1 miss L2
+		stats.L1Miss++;
+		stats.L2Miss++;
+		stats.AccTime += L1.LCy + L2.LCy + L2.MemCyc;
 			if ((operation =='R') || (L1.WrAlloc && L2.WrAlloc) || (L1.WrAlloc && !L2.WrAlloc)){ // L1 WA L2 WA  or // L1 WA L2 NWA or (operation='R')
 				if(L2.cache_table[L1_newline.set].size() == L2.ways){ // if L2 set is full:
 					//not dirty: remove first element in set from L2
@@ -329,7 +344,7 @@ int main(int argc, char **argv) {
 	L2.init_class( MemCyc,  BSize ,  L2Size,  L2Assoc,  L2Cyc ,  WrAlloc);
 
 	while (getline(file, line)) {
-
+		AccNum++; //count commands
 		stringstream ss(line);
 		string address;
 		char operation = 0; // read (R) or write (W)
@@ -355,9 +370,9 @@ int main(int argc, char **argv) {
 
 	}
 
-	double L1MissRate;
-	double L2MissRate;
-	double avgAccTime;
+	double L1MissRate = stats.L1Miss/ (stats.L1Miss+stats.L1Hit);
+	double L2MissRate = stats.L2Miss/ (stats.L2Miss+stats.L2Hit);;
+	double avgAccTime = AccTime/AccNum;
 
 	printf("L1miss=%.03f ", L1MissRate);
 	printf("L2miss=%.03f ", L2MissRate);
