@@ -177,7 +177,7 @@ void handle_command(unsigned long int address, char operation){
 		stats.AccTime += L1.LCy;
 		L1.update_LRU( L1_newline);// update LRU, update Dirty if write
 	} 
-	else if ((L1.is_exist(L1_newline) == -1) && (L2.is_exist(L1_newline) != -1)) { // miss L1 hit L2
+	else if ((L1.is_exist(L1_newline) == -1) && (L2.is_exist(L2_newline) != -1)) { // miss L1 hit L2
 		stats.L1Miss++;
 		stats.L2Hit++;
 		stats.AccTime += L1.LCy + L2.LCy;
@@ -186,6 +186,7 @@ void handle_command(unsigned long int address, char operation){
 			L2.update_LRU(L2_newline); // update LRU L2 with new
 			if (L1.cache_table[L1_newline.set].size() == L1.ways){ // if L1 set is full:
 				cache_line tmp_line = *L1.cache_table[L1_newline.set].begin();
+				cache_line tmp_lineL2 = L2.create_cache_line(tmp_line.address, operation);
 				if(tmp_line.dirty != 1){//not dirty:
 					// L1.cache_table[tmp_line.set].erase(tmp_line); // remove first element in set from L1
 					L1.erase_cache_line(tmp_line); // remove first element in set from L1
@@ -195,14 +196,14 @@ void handle_command(unsigned long int address, char operation){
 					
 					//L1.cache_table[tmp_line.set].erase(tmp_line); // remove first element in set from L1
 					L1.erase_cache_line(tmp_line); // remove first element in set from L1
-					if(L2.cache_table[L1_newline.set].size() == L2.ways){ // L2 is full
-						L2.cache_table[L1_newline.set].erase(L2.cache_table[L1_newline.set].begin()); // remove first element from L2 LRU 
+					if(L2.cache_table[L2_newline.set].size() == L2.ways){ // L2 is full
+						L2.cache_table[L2_newline.set].erase(L2.cache_table[L2_newline.set].begin()); // remove first element from L2 LRU 
 					}
-					if(L2.is_exist(tmp_line)){ // insert old L1 element to L2
-						L2.update_LRU( tmp_line);// update LRU, update Dirty if write
+					if(L2.is_exist(tmp_lineL2)){ // insert old L1 element to L2
+						L2.update_LRU( tmp_lineL2);// update LRU, update Dirty if write
 					}
 					else{
-						L2.push_back_line(tmp_line); // push back to L2
+						L2.push_back_line(tmp_lineL2); // push back to L2
 					}
 				}
 			}
@@ -218,23 +219,24 @@ void handle_command(unsigned long int address, char operation){
 			L2.update_LRU( L2_newline);
 		}
 	}
-	else if((L1.is_exist(L1_newline) == -1) && (L2.is_exist(L1_newline) == -1)){ // miss L1 miss L2
+	else if((L1.is_exist(L1_newline) == -1) && (L2.is_exist(L2_newline) == -1)){ // miss L1 miss L2
 		stats.L1Miss++;
 		stats.L2Miss++;
 		stats.AccTime += L1.LCy + L2.LCy + L2.MemCyc;
 			if ((operation =='R') || (L1.WrAlloc && L2.WrAlloc) || (L1.WrAlloc && !L2.WrAlloc)){ // L1 WA L2 WA  or // L1 WA L2 NWA or (operation='R')
-				if(L2.cache_table[L1_newline.set].size() == L2.ways){ // if L2 set is full:
+				if(L2.cache_table[L2_newline.set].size() == L2.ways){ // if L2 set is full:
 					//not dirty: remove first element in set from L2
 					 
-					if (L2.cache_table[L1_newline.set].begin()->dirty == 1){ //dirty: write first element in set from L2 to mem and then remove from L2
+					if (L2.cache_table[L2_newline.set].begin()->dirty == 1){ //dirty: write first element in set from L2 to mem and then remove from L2
 						// mem access
 					}
-					L2.cache_table[L1_newline.set].erase(L2.cache_table[L1_newline.set].begin());
+					L2.cache_table[L2_newline.set].erase(L2.cache_table[L1_newline.set].begin());
 					
 				}
-				L2.push_back_line(L1_newline); //insert line to L2 and update LRU L2
+				L2.push_back_line(L2_newline); //insert line to L2 and update LRU L2
 				if (L1.cache_table[L1_newline.set].size() == L1.ways){ // if L1 set is full:
 					cache_line tmp_line = *L1.cache_table[L1_newline.set].begin();
+					cache_line tmp_lineL2 = L2.create_cache_line(tmp_line.address, operation);
 					if(tmp_line.dirty != 1){//not dirty:
 						L1.erase_cache_line(tmp_line); // remove first element in set from L1						
 						//L1.cache_table[L1_newline.set].erase(tmp_line); // remove first element in set from L1
@@ -244,32 +246,32 @@ void handle_command(unsigned long int address, char operation){
 						
 						L1.erase_cache_line(tmp_line); // remove first element in set from L1
 						//L1.cache_table[L1_newline.set].erase(tmp_line); // remove first element in set from L1
-						if(L2.cache_table[L1_newline.set].size() == L2.ways){ // L2 is full
-							L2.cache_table[L1_newline.set].erase(L2.cache_table[L1_newline.set].begin()); // remove first element from L2 LRU 
+						if(L2.cache_table[L2_newline.set].size() == L2.ways){ // L2 is full
+							L2.cache_table[L2_newline.set].erase(L2.cache_table[L2_newline.set].begin()); // remove first element from L2 LRU 
 						}
-						if(L2.is_exist(tmp_line)){ // insert old L1 element to L2
-							L2.update_LRU( tmp_line);// update LRU, update Dirty if write
+						if(L2.is_exist(tmp_lineL2)){ // insert old L1 element to L2
+							L2.update_LRU( tmp_lineL2);// update LRU, update Dirty if write
 						}
 						else{
-							L2.push_back_line(tmp_line); // push back to L2
+							L2.push_back_line(tmp_lineL2); // push back to L2
 						}
 					}
 				}
 
 				L1.push_back_line(L1_newline); // insert line to L1, update LRU L1
 			} 
-			else if((!L1.WrAlloc && L2.WrAlloc)){ // L1 NWA L2 WA
-				if(L2.cache_table[L1_newline.set].size() == L2.ways){ // if L2 set is full:
-					//not dirty: remove first element in set from L2
+			// else if((!L1.WrAlloc && L2.WrAlloc)){ // L1 NWA L2 WA
+			// 	if(L2.cache_table[L1_newline.set].size() == L2.ways){ // if L2 set is full:
+			// 		//not dirty: remove first element in set from L2
 					 
-					if (L2.cache_table[L1_newline.set].begin()->dirty == 1){ //dirty: write first element in set from L2 to mem and then remove from L2
-						// mem access
-					}
-					L2.cache_table[L1_newline.set].erase(L2.cache_table[L1_newline.set].begin());
+			// 		if (L2.cache_table[L1_newline.set].begin()->dirty == 1){ //dirty: write first element in set from L2 to mem and then remove from L2
+			// 			// mem access
+			// 		}
+			// 		L2.cache_table[L1_newline.set].erase(L2.cache_table[L1_newline.set].begin());
 					
-				}
-				L2.push_back_line(L1_newline); //insert line to L2 and update LRU L2			
-			}
+			// 	}
+			// 	L2.push_back_line(L1_newline); //insert line to L2 and update LRU L2			
+			// }
 			else if((!L1.WrAlloc && !L2.WrAlloc)){ // L1 NWA L2 NWA
 				//write in mem
 			}
