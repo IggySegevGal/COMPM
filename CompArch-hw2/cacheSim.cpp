@@ -196,20 +196,20 @@ void handle_command(unsigned long int address, char operation){
 					
 					//L1.cache_table[tmp_line.set].erase(tmp_line); // remove first element in set from L1
 					L1.erase_cache_line(tmp_line); // remove first element in set from L1
-					
-					if(L2.is_exist(tmp_lineL2)){ // insert old L1 element to L2
-						L2.update_LRU( tmp_lineL2);// update LRU, update Dirty if write
-					}
-					else{
-						if(L2.cache_table[L2_newline.set].size() == L2.ways){ // L2 is full
-							cache_line tmp_L1 = L1.create_cache_line(L2.cache_table[L2_newline.set].begin()->address, operation);
-								if(L1.is_exist(tmp_L1)){ // if in L1 - remove from L1
-									L1.erase_cache_line(tmp_L1);
-								}
-							L2.cache_table[L2_newline.set].erase(L2.cache_table[L2_newline.set].begin()); // remove first element from L2 LRU 
-						}
-						L2.push_back_line(tmp_lineL2); // push back to L2
-					}
+					L2.update_LRU( tmp_lineL2);// update LRU, update Dirty if write
+					//if(L2.is_exist(tmp_lineL2)){ // insert old L1 element to L2
+					//	L2.update_LRU( tmp_lineL2);// update LRU, update Dirty if write
+					//}
+					//else{
+					//	if(L2.cache_table[L2_newline.set].size() == L2.ways){ // L2 is full
+					//		cache_line tmp_L1 = L1.create_cache_line(L2.cache_table[L2_newline.set].begin()->address, operation);
+					//			if(L1.is_exist(tmp_L1)){ // if in L1 - remove from L1
+					//				L1.erase_cache_line(tmp_L1);
+					//			}
+					//		L2.cache_table[L2_newline.set].erase(L2.cache_table[L2_newline.set].begin()); // remove first element from L2 LRU 
+					//	}
+					//	L2.push_back_line(tmp_lineL2); // push back to L2
+					//}
 				}
 			}
 
